@@ -81,13 +81,12 @@ async def handler(websocket):
 async def decode_message(message, ws) -> json:
     msg = json.loads(message)
     request = msg["request"]
-    match request:
-        case "join_waiting_list":
+    if request == "join_waiting_list":
             _client_id = clients[ws]
             # TODO: check msg content is valid
             teams_waiting.append([_client_id, msg["team"]])
             await waiting_list_changed()
-        case "play_against":
+    elif request == "play_against":
             # set client team
             away_team = {}
             home_team = {}
