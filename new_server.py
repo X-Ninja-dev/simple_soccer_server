@@ -80,7 +80,8 @@ async def handler(websocket):
 
 async def decode_message(message, ws) -> json:
     msg = json.loads(message)
-    match msg["request"]:
+    request = msg["request"]
+    match request:
         case "join_waiting_list":
             _client_id = clients[ws]
             # TODO: check msg content is valid
