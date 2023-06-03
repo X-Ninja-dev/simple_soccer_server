@@ -1,0 +1,39 @@
+type,penalty,stamina,passing,handling,one-on-one,aerial,command,positioning,reflexes,agility
+Header,0,0,0,0,0,0.75,0,0,0.25,0
+Long Shot,0,0,0,0,0,0,0,0.2,0.1,0.7
+Shot,0,0,0,0,0,0,0,0.3,0.7,0
+Isolated Shot,0,0,0,0,1,0,0,0,0,0
+Corner,0,0,0,0,0,0.3,0.7,0,0,0
+Free Kick,0,0,0,0,0,0,0.25,0,0.25,0.5
+Penaty,1,0,0,0,0,0,0,0,0,0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
