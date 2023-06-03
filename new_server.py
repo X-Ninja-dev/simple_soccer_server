@@ -197,7 +197,7 @@ async def main():
     print("\n\n-----------------------------------------------------------------------------")
     print("Server running")
     print("-----------------------------------------------------------------------------\n\n")
-    async with websockets.serve(handler, "", 8001):
+    async with websockets.serve(handler, "", 3389):
         await asyncio.Future()  # run forever
 
 
