@@ -40,11 +40,14 @@ ai_teams = [
 
 # used to generate client id's when clients connect
 client_id = len(ai_teams)
-# clients are enterred as KEY websocket VALUE id :int
+# clients are enterred as KEY = websocket VALUE = id :int
 clients = {}
 # teams are entered as [client_id, team]
 teams_waiting = []
 
+
+# DEBUG
+match_playing = False
 
 async def handler(websocket):
     # New client connected
@@ -61,21 +64,29 @@ async def handler(websocket):
         await websocket.send(response)
         await players_online_changed()
     while True:
+        # TODO: refactor ALL of the exception handling here and in the rest of the file
         try:
             message = await websocket.recv()
             print(f"message: {message}")
         except websockets.exceptions.ConnectionClosed:
             print("\n-----------------------------------------------------------------------------")
-            print(f"Client {websocket} with ID: {clients[websocket]} disconnected")
+            print(f"Client {websocket}") # with ID: {clients[websocket]} disconnected")
             print("-----------------------------------------------------------------------------\n")
             client_id = clients[websocket]
             # try to remove players team
+            print(" --------------------- deleting client ------------------------------")
             del clients[websocket]
             await remove_waiting_team(client_id)
             await players_online_changed()
             break
-        response = await decode_message(message, websocket)
-        await websocket.send(response)
+        try:
+            response = await decode_message(message, websocket)
+        except Exception as e:
+            print(f"Exception in Handler decode_message(message, websocket): {e}")
+        try:
+            await websocket.send(response)
+        except Exception as e:
+            print(f"Exception in Handler websocket.send(response): {e}")
 
 
 async def decode_message(message, ws) -> json:
@@ -182,15 +193,27 @@ async def play_match(home, away, socks):
     # generating some fake match updates
     await asyncio.sleep(2)
 
+    # TODO: refactor. match_playing used to catch if a client closes the game while playing a match
+    #       NOT sure it has any effect the way the main while loop is written now
+    match_playing = True
     for comment in comments:
-        for sock in socks:
-            await sock.send(json.dumps({"error" : "OK", "match_update" : comment}))
-        await asyncio.sleep(random.random() + 1)
+        if match_playing:
+            for sock in socks:
+                try:
+                    await sock.send(json.dumps({"error" : "OK", "match_update" : comment}))
+                except Exception as e:
+                    # Do no think this is ever hit the way the exception handling is in the main while loop
+                    print(f"Exception in comments being send to clients: {e}")
+                    match_playing = False
+                    return
+            await asyncio.sleep(random.random() + 1)
+        else:
+            continue
     
-    await asyncio.sleep(2)
-
-    for sock in socks:
-        await sock.send(json.dumps({"error" : "OK", "match_finished" : report}))
+    if match_playing:
+        await asyncio.sleep(2)
+        for sock in socks:
+            await sock.send(json.dumps({"error" : "OK", "match_finished" : report}))
 
 
 async def main():
