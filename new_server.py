@@ -14,17 +14,18 @@ comments = [
     "This is where all the crazy action will be happening while the match is played!",
     "There will be highs and lows",
     "We will laugh and cry",
-    "There might be GOOOOOOOAAAAAALLLLLS",
+    "There might even be GOOOOOOOAAAAAALLLLLS",
     "But then again, it is football (soccer :-) ) so maybe not",
     "But should there be GOOOOOOOAAAAAALLLLLS, we will celebrate",
     "",
     "",
     "Nothing more here, because this part isn't actually implemented yet",
-    "Yes, this commentary is all fake",
-    "It has nothing to do with the actual result of the match",
-    ":-)",
-    "Do you want to see the results of the match?",
-    "Then click the 'See Match Report' button that will show up in a few seconds",
+    "The match is being played on the server",
+    "The score shown at the top are the actual score from the match",
+    "All the comments are generated on the server too, but,",
+    "The commentary are just the same for all matches",
+    "",
+    "Lets just end the match here",
     "Wait for it",
     "Waaaait for it",
     "Waaaaaait for it"
@@ -67,7 +68,7 @@ async def handler(websocket):
         # TODO: refactor ALL of the exception handling here and in the rest of the file
         try:
             message = await websocket.recv()
-            print(f"message: {message}")
+            # print(f"message: {message}")
         except websockets.exceptions.ConnectionClosed:
             print("\n-----------------------------------------------------------------------------")
             print(f"Client {websocket}") # with ID: {clients[websocket]} disconnected")
@@ -103,7 +104,7 @@ async def decode_message(message, ws) -> json:
             home_team = {}
             away_id = clients[ws]
             home_id = msg["team_id"]
-
+            away_ws = ws
             try:
                 home_ws_index = list(clients.values())[home_id]
                 home_ws = list(clients.keys())[home_ws_index]
@@ -111,16 +112,26 @@ async def decode_message(message, ws) -> json:
                 # If home is AI team
                 home_ws = None
 
-            away_ws = ws
+            away_index = -1
+            home_index = -1
             for index, team in enumerate(teams_waiting):
-                if away_id == team[0]:
-                    away_team = team[1]
-                    teams_waiting.pop(index)
+                if away_id == team[1]["settings"]["id"]:
+                    away_index = index
                 elif home_id == team[0]:
-                    home_team = team[1]
-                    teams_waiting.pop(index)
+                    home_index = index
+
+            # Home should never be -1 because it should always be in the teaqms waiting list
+            if home_index != -1:
+                home_team = teams_waiting[home_index][1]
+            if away_index == -1:
+                teams_waiting.pop(home_index)
+            else:
+                away_team = teams_waiting[away_index][1]
+                teams_waiting.pop(max(home_index, away_index))
+                teams_waiting.pop(min(home_index, away_index))
+            
             # If the away team was not found it is because the player didn't join waiting so we take the team from the msg
-            if not away_team:
+            if away_index == -1:
                 away_team = msg["team"]
             await waiting_list_changed()
             
@@ -177,7 +188,6 @@ async def play_match(home, away, socks):
 
     match_number = len([f.path for f in os.scandir("./matches") if f.is_dir()]) + 1
     path = f"./matches/{match_number}"
-    print(path)
     os.makedirs(path)
     with open(f"{path}/{home['settings']['name']}.json", "w") as f:
         json.dump(home, f)
@@ -188,8 +198,21 @@ async def play_match(home, away, socks):
 
     report = ""
     with open(f"{path}/report.json", "r") as f:
-        report = f.read()
+        report = json.load(f)
     
+    print(report["Team A"]["Goals"])
+    print(report["Team B"]["Goals"])
+
+    for sock in socks:
+        await sock.send(json.dumps(
+            {"error" : "OK",
+             "match_score" : {
+                 "home" : report["Team A"]["Goals"],
+                 "away" : report["Team B"]["Goals"]
+                 }
+            })
+        )
+
     # generating some fake match updates
     await asyncio.sleep(2)
 
