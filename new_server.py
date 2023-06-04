@@ -133,7 +133,6 @@ async def decode_message(message, ws) -> json:
             # If the away team was not found it is because the player didn't join waiting so we take the team from the msg
             if away_index == -1:
                 away_team = msg["team"]
-            await waiting_list_changed()
             
             # If home is AI team there will be no socket to send too
             socks = [home_ws] if home_ws else []
@@ -141,6 +140,7 @@ async def decode_message(message, ws) -> json:
             for sock in socks:
                 # TODO: wait for feedback from users that they are ready to play
                 await sock.send(json.dumps({"error" : "OK", "ready_for_match" : [home_team["settings"]["name"], away_team["settings"]["name"]]}))
+            await waiting_list_changed()
             await play_match(home_team, away_team, socks)
     return json.dumps({"error" : "OK"})
 
@@ -163,6 +163,12 @@ async def players_online_changed():
 
 
 async def waiting_list_changed():
+    if len(teams_waiting) == 0:
+        # DEBUG: Keeps adding the 4 AI teams to the list when is down to 1 lawst team
+        # The reason it doesn't wait for the teams to go to 0 is that theres a bug and
+        # the last team can't play a match
+        for i, t in enumerate(ai_teams):
+            teams_waiting.append([i+1, t])
     teams = []
     for t in teams_waiting:
         data = t[1]["settings"]
@@ -173,6 +179,7 @@ async def waiting_list_changed():
         await sock.send(response)
 
 
+# Bad naming. This is only called when a client disconnects and his team will be removed
 async def remove_waiting_team(team_id):
     print(f"\n\n\nremoving team for client id: {team_id}\n\n\n")
     for index, team in enumerate(teams_waiting):
@@ -184,7 +191,7 @@ async def remove_waiting_team(team_id):
 
 async def play_match(home, away, socks):
     # DEBUG: using team from ai_teams for debug
-    away = ai_teams[0]
+    # away = ai_teams[0]
 
     match_number = len([f.path for f in os.scandir("./matches") if f.is_dir()]) + 1
     path = f"./matches/{match_number}"
