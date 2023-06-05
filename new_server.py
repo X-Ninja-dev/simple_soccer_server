@@ -106,9 +106,12 @@ async def decode_message(message, ws) -> json:
             home_id = msg["team_id"]
             away_ws = ws
             try:
-                home_ws_index = list(clients.values())[home_id]
+                home_ws_index = list(clients.values()).index(home_id)
                 home_ws = list(clients.keys())[home_ws_index]
-            except IndexError:
+                print(f"\nhome_ws_index: {home_ws_index}")
+                print(f"clients : {clients}")
+                print(f"home_ws")
+            except (ValueError, IndexError):
                 # If home is AI team
                 home_ws = None
 
@@ -139,6 +142,8 @@ async def decode_message(message, ws) -> json:
             socks.append(away_ws)
             for sock in socks:
                 # TODO: wait for feedback from users that they are ready to play
+                # DEBUG
+                print(f'home team: {home_team["settings"]["name"]} away team: {away_team["settings"]["name"]}')
                 await sock.send(json.dumps({"error" : "OK", "ready_for_match" : [home_team["settings"]["name"], away_team["settings"]["name"]]}))
             await waiting_list_changed()
             await play_match(home_team, away_team, socks)
@@ -181,7 +186,7 @@ async def waiting_list_changed():
 
 # Bad naming. This is only called when a client disconnects and his team will be removed
 async def remove_waiting_team(team_id):
-    print(f"\n\n\nremoving team for client id: {team_id}\n\n\n")
+    print(f"\nremoving team for client id: {team_id}\n")
     for index, team in enumerate(teams_waiting):
         if team_id == team[0]:
             print(f"found team team id {team[0]}")
